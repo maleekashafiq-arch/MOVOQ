@@ -45,6 +45,18 @@ MOVOQ backend is a layered .NET solution structured to support maintainable, tes
 - `Api` may reference `Application` and `Infrastructure`.
 - `Tests` may reference projects under test.
 
+## Architecture Decisions - Stage 1
+
+- `MOVOQ.Shared` is kept as a formal shared layer with strict scope:
+  - allowed: shared enums, constants, error codes, primitive shared types
+  - not allowed: DTOs, business logic, domain entities, database models
+- DTOs remain in `MOVOQ.Application`.
+- Domain entities and domain logic remain in `MOVOQ.Domain`.
+- Stage 1 repository strategy keeps backend and future client apps in the same repository for simpler founder-level management.
+- Offline model uses eventual consistency, while backend database remains source of truth.
+- `MOVOQ.Tests` stays as one project with `Unit` and `Integration` folders for Stage 1.
+- `MOVOQ.sln` should be maintained as primary solution for tool and CI compatibility; `.slnx` may remain.
+
 ## Current Setup Commands
 
 Run from the `backend` directory:
