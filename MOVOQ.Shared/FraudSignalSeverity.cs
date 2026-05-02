@@ -1,5 +1,6 @@
-namespace MOVOQ.Domain.Enums;
+namespace MOVOQ.Shared;
 
+/// <summary>Severity tier for fraud review.</summary>
 public enum FraudSignalSeverity
 {
     Low = 1,

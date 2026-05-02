@@ -55,7 +55,7 @@ MOVOQ backend is a layered .NET solution structured to support maintainable, tes
 - Stage 1 repository strategy keeps backend and future client apps in the same repository for simpler founder-level management.
 - Offline model uses eventual consistency, while backend database remains source of truth.
 - `MOVOQ.Tests` stays as one project with `Unit` and `Integration` folders for Stage 1.
-- `MOVOQ.sln` should be maintained as primary solution for tool and CI compatibility; `.slnx` may remain.
+- `MOVOQ.sln` is the **primary** solution for tools and CI; it includes all six projects (`MOVOQ.Shared` through `MOVOQ.Tests`). `MOVOQ.slnx` may remain in parallel.
 
 ## Current Setup Commands
 

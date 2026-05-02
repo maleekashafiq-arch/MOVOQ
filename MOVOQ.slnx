@@ -3,5 +3,6 @@
   <Project Path="MOVOQ.Application/MOVOQ.Application.csproj" />
   <Project Path="MOVOQ.Domain/MOVOQ.Domain.csproj" />
   <Project Path="MOVOQ.Infrastructure/MOVOQ.Infrastructure.csproj" />
+  <Project Path="MOVOQ.Shared/MOVOQ.Shared.csproj" />
   <Project Path="MOVOQ.Tests/MOVOQ.Tests.csproj" />
 </Solution>

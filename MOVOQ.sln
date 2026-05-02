@@ -1,0 +1,51 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MOVOQ.Shared", "MOVOQ.Shared\MOVOQ.Shared.csproj", "{2C42153E-75CA-4FED-A418-F346C991409A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MOVOQ.Domain", "MOVOQ.Domain\MOVOQ.Domain.csproj", "{4D36B84B-276E-4ED5-A2D5-599FC1EE80BE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MOVOQ.Application", "MOVOQ.Application\MOVOQ.Application.csproj", "{1568B065-7B8B-44AA-A114-BB725F60A3C6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MOVOQ.Infrastructure", "MOVOQ.Infrastructure\MOVOQ.Infrastructure.csproj", "{0711C06C-6C0E-4336-A72F-72B32303AF71}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MOVOQ.Api", "MOVOQ.Api\MOVOQ.Api.csproj", "{2EA118A3-8444-4677-922D-8616519F5A9E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MOVOQ.Tests", "MOVOQ.Tests\MOVOQ.Tests.csproj", "{FACDEF2D-3F12-49C1-9B0C-1254F3AB0451}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2C42153E-75CA-4FED-A418-F346C991409A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C42153E-75CA-4FED-A418-F346C991409A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2C42153E-75CA-4FED-A418-F346C991409A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2C42153E-75CA-4FED-A418-F346C991409A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4D36B84B-276E-4ED5-A2D5-599FC1EE80BE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4D36B84B-276E-4ED5-A2D5-599FC1EE80BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4D36B84B-276E-4ED5-A2D5-599FC1EE80BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4D36B84B-276E-4ED5-A2D5-599FC1EE80BE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1568B065-7B8B-44AA-A114-BB725F60A3C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1568B065-7B8B-44AA-A114-BB725F60A3C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1568B065-7B8B-44AA-A114-BB725F60A3C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1568B065-7B8B-44AA-A114-BB725F60A3C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0711C06C-6C0E-4336-A72F-72B32303AF71}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0711C06C-6C0E-4336-A72F-72B32303AF71}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0711C06C-6C0E-4336-A72F-72B32303AF71}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0711C06C-6C0E-4336-A72F-72B32303AF71}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2EA118A3-8444-4677-922D-8616519F5A9E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2EA118A3-8444-4677-922D-8616519F5A9E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2EA118A3-8444-4677-922D-8616519F5A9E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2EA118A3-8444-4677-922D-8616519F5A9E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FACDEF2D-3F12-49C1-9B0C-1254F3AB0451}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FACDEF2D-3F12-49C1-9B0C-1254F3AB0451}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FACDEF2D-3F12-49C1-9B0C-1254F3AB0451}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FACDEF2D-3F12-49C1-9B0C-1254F3AB0451}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
