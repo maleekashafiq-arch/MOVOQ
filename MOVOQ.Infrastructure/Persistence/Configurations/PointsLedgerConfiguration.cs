@@ -12,7 +12,7 @@ internal sealed class PointsLedgerConfiguration : IEntityTypeConfiguration<Point
 
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.ReferenceType).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.ReferenceType).IsRequired();
         builder.Property(x => x.Description).HasMaxLength(1024);
 
         builder.HasIndex(x => new { x.UserId, x.OccurredAt });

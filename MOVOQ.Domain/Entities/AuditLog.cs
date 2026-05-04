@@ -2,8 +2,8 @@ using MOVOQ.Shared;
 
 namespace MOVOQ.Domain.Entities;
 
-/// <summary>Append-only admin/system audit entry. Use <see cref="BaseEntity.CreatedAt"/> as the authoritative timestamp.</summary>
-public sealed class AuditLog : BaseEntity
+/// <summary>Append-only admin/system audit entry. Use <see cref="AppendOnlyEntity.CreatedAt"/> as the authoritative timestamp.</summary>
+public sealed class AuditLog : AppendOnlyEntity
 {
     public Guid? AdminUserId { get; set; }
 

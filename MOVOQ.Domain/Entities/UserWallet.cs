@@ -9,9 +9,9 @@ public sealed class UserWallet : BaseEntity
 
     public User User { get; set; } = null!;
 
-    public int Balance { get; set; }
+    public long Balance { get; set; }
 
-    public int LifetimeEarnedPoints { get; set; }
+    public long LifetimeEarnedPoints { get; set; }
 
-    public int LifetimeSpentPoints { get; set; }
+    public long LifetimeSpentPoints { get; set; }
 }

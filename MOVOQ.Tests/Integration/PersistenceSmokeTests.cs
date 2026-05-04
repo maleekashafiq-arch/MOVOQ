@@ -45,7 +45,7 @@ public sealed class PersistenceSmokeTests : IClassFixture<PersistenceWebApplicat
             UserId = user.Id,
             Amount = 42,
             TransactionType = PointsTransactionType.StepsEarned,
-            ReferenceType = "DailyStep",
+            ReferenceType = LedgerReferenceType.DailyStepRecord,
             OccurredAt = DateTime.UtcNow,
         });
 

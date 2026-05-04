@@ -17,7 +17,7 @@ public sealed class LuckyDrawTicket : BaseEntity
 
     public TicketStatus Status { get; set; } = TicketStatus.Active;
 
-    public int PointsCostSnapshot { get; set; }
+    public long PointsCostSnapshot { get; set; }
 
     public Guid? PointsLedgerId { get; set; }
 

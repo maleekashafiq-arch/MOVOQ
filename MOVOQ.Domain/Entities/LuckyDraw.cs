@@ -11,7 +11,7 @@ public sealed class LuckyDraw : BaseEntity
 
     public required string PrizeDescription { get; set; }
 
-    public int TicketCostPoints { get; set; }
+    public long TicketCostPoints { get; set; }
 
     public DateTime StartAt { get; set; }
 

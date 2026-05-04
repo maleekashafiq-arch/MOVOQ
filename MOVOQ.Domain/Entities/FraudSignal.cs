@@ -3,7 +3,7 @@ using MOVOQ.Shared;
 namespace MOVOQ.Domain.Entities;
 
 /// <summary>Server-generated fraud or risk signal. Append-only in MVP.</summary>
-public sealed class FraudSignal : BaseEntity
+public sealed class FraudSignal : AppendOnlyEntity
 {
     public Guid UserId { get; set; }
 

@@ -13,7 +13,7 @@ public sealed class Reward : BaseEntity
 
     public string? Description { get; set; }
 
-    public int PointsCost { get; set; }
+    public long PointsCost { get; set; }
 
     public int? StockQuantity { get; set; }
 

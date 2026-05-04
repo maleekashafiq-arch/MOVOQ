@@ -15,7 +15,7 @@ public sealed class RewardRedemption : BaseEntity
 
     public RedemptionStatus Status { get; set; } = RedemptionStatus.Pending;
 
-    public int PointsCostSnapshot { get; set; }
+    public long PointsCostSnapshot { get; set; }
 
     public Guid? PointsLedgerId { get; set; }
 

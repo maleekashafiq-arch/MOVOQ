@@ -39,4 +39,6 @@ public sealed class User : BaseEntity
     public ICollection<Notification> Notifications { get; } = new List<Notification>();
 
     public ICollection<FraudSignal> FraudSignals { get; } = new List<FraudSignal>();
+
+    public ICollection<ProcessedCommand> ProcessedCommands { get; } = new List<ProcessedCommand>();
 }
