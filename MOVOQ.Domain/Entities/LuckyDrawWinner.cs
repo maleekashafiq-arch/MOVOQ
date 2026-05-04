@@ -3,7 +3,7 @@ namespace MOVOQ.Domain.Entities;
 /// <summary>Immutable winner record for a completed draw.</summary>
 /// <remarks>
 /// Invariant: <see cref="UserId"/> must always match the <see cref="UserId"/> on the winning <see cref="LuckyDrawTicket"/>.
-/// Enforce in Application and with a database check constraint when persistence is wired.
+/// Enforce in Application; optional DB CHECK on providers that allow subqueries in CHECK (not SQLite — use triggers or SQL Server–specific migrations if required).
 /// </remarks>
 public sealed class LuckyDrawWinner : AppendOnlyEntity
 {

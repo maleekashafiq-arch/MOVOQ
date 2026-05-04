@@ -8,7 +8,11 @@ internal sealed class AdsWatchedConfiguration : IEntityTypeConfiguration<AdsWatc
 {
     public void Configure(EntityTypeBuilder<AdsWatched> builder)
     {
-        builder.ToTable("ads_watched");
+        builder.ToTable(
+            "ads_watched",
+            t => t.HasCheckConstraint(
+                "CK_ads_watched_non_rewarded_no_points",
+                $"({nameof(AdsWatched.IsRewarded)} = 1) OR ({nameof(AdsWatched.PointsAmount)} = 0 AND {nameof(AdsWatched.PointsAwarded)} = 0)"));
 
         builder.HasKey(x => x.Id);
 

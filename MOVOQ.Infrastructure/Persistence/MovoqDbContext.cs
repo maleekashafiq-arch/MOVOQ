@@ -43,6 +43,8 @@ public sealed class MovoqDbContext(DbContextOptions<MovoqDbContext> options) : D
 
     public DbSet<AppSetting> AppSettings => Set<AppSetting>();
 
+    public DbSet<ProcessedCommand> ProcessedCommands => Set<ProcessedCommand>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

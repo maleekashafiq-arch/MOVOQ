@@ -2,6 +2,22 @@
 
 MOVOQ backend is a layered .NET solution structured to support maintainable, testable, and scalable server-side development using Clean Architecture principles.
 
+## Official technology stack
+
+| Concern | Choice |
+|---------|--------|
+| API | ASP.NET Core Web API (.NET) |
+| Structure | Clean Architecture |
+| Data access | Entity Framework Core |
+| **Database (official)** | **Microsoft SQL Server** — local development, CI, and testing |
+| **Cloud database target** | **Azure SQL** |
+| Admin web | React |
+| Mobile apps | Flutter |
+
+**Database:** SQL Server is the official database for **all** backend-aligned development and testing. **Azure SQL** is the future cloud target. **PostgreSQL** is not an active platform option for MOVOQ. **SQLite** is not part of the official backend strategy (only historical or temporary if it appears in older material).
+
+Full stack narrative, database strategy, and testing guidance: [`docs/architecture/technology-stack.md`](docs/architecture/technology-stack.md).
+
 ## Purpose
 
 - Provide a clear architectural foundation before business features are implemented.
@@ -30,11 +46,12 @@ MOVOQ backend is a layered .NET solution structured to support maintainable, tes
 - `MOVOQ.Api`
   - Composition root and delivery mechanism.
   - HTTP endpoints/controllers, middleware, request/response contracts, and startup wiring.
-  - Depends on `MOVOQ.Application` and `MOVOQ.Infrastructure`.
+  - Depends on `MOVOQ.Application`, `MOVOQ.Infrastructure`, and `MOVOQ.Shared` (route prefixes and other HTTP-bound constants only).
 
 - `MOVOQ.Tests`
   - Unit and integration test scaffolding.
   - Verifies behavior and boundary contracts across layers.
+  - **Testing strategy:** persistence and integration tests should run against **SQL Server** (see `docs/architecture/technology-stack.md`), not SQLite, so results match the official database.
 
 ## Dependency Rules
 
@@ -42,7 +59,7 @@ MOVOQ backend is a layered .NET solution structured to support maintainable, tes
 - `Domain` must not reference other project layers.
 - `Application` may reference `Domain` only.
 - `Infrastructure` may reference `Application` and `Domain`.
-- `Api` may reference `Application` and `Infrastructure`.
+- `Api` may reference `Application`, `Infrastructure`, and `Shared` (constants only at the boundary).
 - `Tests` may reference projects under test.
 
 ## Architecture Decisions - Stage 1
@@ -81,6 +98,7 @@ dotnet add MOVOQ.Infrastructure reference MOVOQ.Application
 dotnet add MOVOQ.Infrastructure reference MOVOQ.Domain
 dotnet add MOVOQ.Api reference MOVOQ.Application
 dotnet add MOVOQ.Api reference MOVOQ.Infrastructure
+dotnet add MOVOQ.Api reference MOVOQ.Shared
 dotnet add MOVOQ.Tests reference MOVOQ.Api
 dotnet add MOVOQ.Tests reference MOVOQ.Application
 dotnet add MOVOQ.Tests reference MOVOQ.Domain

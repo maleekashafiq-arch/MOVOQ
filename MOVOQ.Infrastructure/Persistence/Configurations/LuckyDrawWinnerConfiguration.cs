@@ -8,6 +8,7 @@ internal sealed class LuckyDrawWinnerConfiguration : IEntityTypeConfiguration<Lu
 {
     public void Configure(EntityTypeBuilder<LuckyDrawWinner> builder)
     {
+        // SQLite (dev/tests) does not allow subqueries in CHECK constraints; enforce winner UserId = ticket UserId in Application (and SQL Server CHECK in a provider-specific migration when needed).
         builder.ToTable("lucky_draw_winners");
 
         builder.HasKey(x => x.Id);

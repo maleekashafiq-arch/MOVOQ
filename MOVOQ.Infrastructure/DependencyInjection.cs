@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPointsLedgerRepository, PointsLedgerRepository>();
+        services.AddScoped<IProcessedCommandRepository, ProcessedCommandRepository>();
 
         return services;
     }
