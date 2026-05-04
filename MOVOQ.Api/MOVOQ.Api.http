@@ -1,6 +1,11 @@
 @MOVOQ.Api_HostAddress = http://localhost:5014
 
-GET {{MOVOQ.Api_HostAddress}}/weatherforecast/
+### System (unversioned)
+GET {{MOVOQ.Api_HostAddress}}/health
+Accept: application/json
+
+### API v1 metadata
+GET {{MOVOQ.Api_HostAddress}}/api/v1
 Accept: application/json
 
 ###

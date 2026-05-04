@@ -8,11 +8,16 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.6">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MOVOQ.Application\MOVOQ.Application.csproj" />
     <ProjectReference Include="..\MOVOQ.Infrastructure\MOVOQ.Infrastructure.csproj" />
+    <ProjectReference Include="..\MOVOQ.Shared\MOVOQ.Shared.csproj" />
   </ItemGroup>
 
 </Project>
