@@ -114,7 +114,7 @@ MOVOQ is a reward-based fitness application where users earn points through step
 - Offline submissions with inconsistent timestamps
 - Abnormal step spikes
 
-- Fraud signals must be logged (MVP: silently from the user's perspective).
+- Fraud signals must be logged (MVP: silently from the user’s perspective).
 - **No** immediate blocking in MVP unless hard validation fails.
 
 ### Wallet and ledger
