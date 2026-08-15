@@ -1,0 +1,65 @@
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.rsuser
+*.suo
+*.iml
+*.ipr
+*.iws
+
+# Backend (.NET)
+[Bb]in/
+[Oo]bj/
+*.nupkg
+*.snupkg
+packages/
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+coverage/
+*.log
+*.db
+*.db-shm
+*.db-wal
+
+# Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+.env
+.env.*
+!.env.example
+.vite
+*.tsbuildinfo
+
+# Mobile / Flutter
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+**/ios/Flutter/.last_build_id
+/android/app/debug
+/android/app/profile
+/android/app/release
+*.class
+*.pyc
+*.swp
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+app.*.symbols
+app.*.map.json
