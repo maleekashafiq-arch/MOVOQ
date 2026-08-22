@@ -13,6 +13,7 @@ internal static class LuckyDrawEndpoints
             .WithSummary("Open draws with entry counts, plus the caller's tickets and wallet balance.");
 
         draws.MapPost("/{id:guid}/tickets", BuyTickets)
+            .RequireRateLimiting(RateLimitPolicies.Spend)
             .WithName("BuyLuckyDrawTickets")
             .WithSummary("Spend points on one or more tickets for a draw. Idempotent on CommandId.");
 

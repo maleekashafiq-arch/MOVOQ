@@ -9,6 +9,7 @@ internal static class StepsEndpoints
         var steps = v1.MapGroup("/steps").WithTags("steps").RequireAuthorization();
 
         steps.MapPost("/sync", SyncSteps)
+            .RequireRateLimiting(RateLimitPolicies.StepsSync)
             .WithName("SyncSteps")
             .WithSummary("Submit a device's step claim for one day and receive the server verdict.");
 

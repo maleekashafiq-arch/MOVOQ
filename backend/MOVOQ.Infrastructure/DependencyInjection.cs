@@ -7,6 +7,7 @@ using MOVOQ.Application.Features.Admin;
 using MOVOQ.Application.Features.Dev;
 using MOVOQ.Application.Features.Draws;
 using MOVOQ.Application.Features.Identity;
+using MOVOQ.Application.Features.Marketplace;
 using MOVOQ.Application.Features.Steps;
 using MOVOQ.Infrastructure.Persistence;
 using MOVOQ.Infrastructure.Persistence.Repositories;
@@ -55,6 +56,7 @@ public static class DependencyInjection
         services.AddScoped<IUserProvisioning>(sp => sp.GetRequiredService<IdentityService>());
         services.AddScoped<IStepsService, StepsService>();
         services.AddScoped<ILuckyDrawService, LuckyDrawService>();
+        services.AddScoped<IMarketplaceService, MarketplaceService>();
         services.AddScoped<IDevUserService, DevUserService>();
 
         services.AddScoped<IAuditTrail, AuditTrail>();

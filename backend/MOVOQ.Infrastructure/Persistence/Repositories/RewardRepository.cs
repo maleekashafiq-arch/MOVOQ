@@ -13,6 +13,14 @@ internal sealed class RewardRepository(MovoqDbContext db) : IRewardRepository
             .Include(x => x.Sponsor)
             .SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
 
+    public async Task<Reward?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        await db.Database.ExecuteSqlAsync(
+            $"""SELECT 1 FROM rewards WHERE "Id" = {id} AND "DeletedAt" IS NULL FOR UPDATE""",
+            cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Reward>> ListAsync(CancellationToken cancellationToken = default) =>
         await db.Rewards
             .AsNoTracking()

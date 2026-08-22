@@ -9,5 +9,6 @@ public enum FraudSignalType
     TamperedTimestamp = 4,
     SuspiciousDevicePattern = 5,
     MultipleAccountsSameDevice = 6,
-    AbnormalStepCount = 7
+    AbnormalStepCount = 7,
+    ImpossibleStepRate = 8
 }

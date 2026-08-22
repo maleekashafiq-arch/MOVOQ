@@ -12,6 +12,14 @@ internal sealed class LuckyDrawRepository(MovoqDbContext db) : ILuckyDrawReposit
     public Task<LuckyDraw?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         db.LuckyDraws.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
 
+    public async Task<LuckyDraw?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        await db.Database.ExecuteSqlAsync(
+            $"""SELECT 1 FROM lucky_draws WHERE "Id" = {id} AND "DeletedAt" IS NULL FOR UPDATE""",
+            cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<LuckyDraw>> ListAsync(CancellationToken cancellationToken = default) =>
         await db.LuckyDraws
             .AsNoTracking()

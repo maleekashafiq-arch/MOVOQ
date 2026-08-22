@@ -19,6 +19,11 @@ internal sealed class FakeUnitOfWork : IUnitOfWork
         SaveCount++;
         return Task.FromResult(1);
     }
+
+    public Task<T> ExecuteInTransactionAsync<T>(
+        Func<CancellationToken, Task<T>> action,
+        CancellationToken cancellationToken = default) =>
+        action(cancellationToken);
 }
 
 internal sealed class FakeCallerContext(string? ipAddress) : ICallerContext
@@ -89,6 +94,9 @@ internal sealed class FakeWalletRepository : IUserWalletRepository
     public List<UserWallet> Items { get; } = [];
 
     public void Add(UserWallet wallet) => Items.Add(wallet);
+
+    public Task LockByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
 }
 
 internal sealed class FakeLedgerRepository : IPointsLedgerRepository
@@ -255,6 +263,9 @@ internal sealed class FakeLuckyDrawRepository : ILuckyDrawRepository
     public Task<LuckyDraw?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(Items.SingleOrDefault(x => x.Id == id));
 
+    public Task<LuckyDraw?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default) =>
+        GetAsync(id, cancellationToken);
+
     public Task<IReadOnlyList<LuckyDraw>> ListAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<LuckyDraw>>(Items.OrderByDescending(x => x.CreatedAt).ToList());
 
@@ -419,6 +430,9 @@ internal sealed class FakeRewardRepository : IRewardRepository
     public Task<Reward?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(Items.SingleOrDefault(x => x.Id == id));
 
+    public Task<Reward?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default) =>
+        GetAsync(id, cancellationToken);
+
     public Task<IReadOnlyList<Reward>> ListAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<Reward>>(Items.OrderBy(x => x.Name).ToList());
 }
@@ -426,6 +440,16 @@ internal sealed class FakeRewardRepository : IRewardRepository
 internal sealed class FakeRewardRedemptionRepository : IRewardRedemptionRepository
 {
     public List<RewardRedemption> Items { get; } = [];
+
+    public void Add(RewardRedemption redemption) => Items.Add(redemption);
+
+    public Task<IReadOnlyList<RewardRedemption>> ListForUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<RewardRedemption>>(Items
+            .Where(x => x.UserId == userId)
+            .OrderByDescending(x => x.RequestedAt)
+            .ToList());
 
     public Task<IReadOnlyList<RedemptionCount>> CountByRewardAsync(
         IReadOnlyCollection<Guid> rewardIds,

@@ -65,7 +65,28 @@ public sealed class LuckyDrawService(
             return await ReadStateAsync(user, drawId, cancellationToken) with { Duplicate = true };
         }
 
-        var draw = await draws.GetAsync(drawId, cancellationToken)
+        try
+        {
+            return await unitOfWork.ExecuteInTransactionAsync(
+                ct => ApplyPurchaseAsync(user, drawId, command, now, ct),
+                cancellationToken);
+        }
+        catch (DuplicateCommandException)
+        {
+            return await ReadStateAsync(user, drawId, cancellationToken) with { Duplicate = true };
+        }
+    }
+
+    private async Task<BuyTicketResultDto> ApplyPurchaseAsync(
+        User user,
+        Guid drawId,
+        BuyTicketCommand command,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        await wallets.LockByUserIdAsync(user.Id, cancellationToken);
+
+        var draw = await draws.GetForUpdateAsync(drawId, cancellationToken)
             ?? throw new AppException(ErrorCodes.NotFound, "That draw no longer exists.", 404);
 
         RequireOpen(draw, now);

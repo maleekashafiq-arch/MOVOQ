@@ -10,6 +10,7 @@ internal static class IdentityEndpoints
         var auth = v1.MapGroup("/auth").WithTags("identity");
         auth.MapPost("/session", ExchangeSession)
             .RequireAuthorization()
+            .RequireRateLimiting(RateLimitPolicies.Auth)
             .WithName("ExchangeSession")
             .WithSummary("Create or resume a MOVOQ user from the Firebase (or test) identity token.");
 

@@ -43,4 +43,16 @@ public static class ErrorCodes
 
     /// <summary>The requested state change is not legal from the record's current state.</summary>
     public const string InvalidStateTransition = "invalid_state_transition";
+
+    /// <summary>The reward is not on sale: draft, inactive, expired, or the sponsor is paused.</summary>
+    public const string RewardUnavailable = "reward_unavailable";
+
+    /// <summary>The reward has no remaining stock.</summary>
+    public const string OutOfStock = "out_of_stock";
+
+    /// <summary>Two writers changed the same row; the client should retry.</summary>
+    public const string ConcurrencyConflict = "concurrency_conflict";
+
+    /// <summary>The client is sending requests faster than the endpoint allows.</summary>
+    public const string RateLimited = "rate_limited";
 }

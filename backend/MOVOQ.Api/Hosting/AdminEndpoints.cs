@@ -16,6 +16,7 @@ internal static class AdminEndpoints
 
         // Sign-in resolves the operator itself, so it must not sit behind the operator filter.
         admin.MapPost("/session", SignIn)
+            .RequireRateLimiting(RateLimitPolicies.Auth)
             .WithName("AdminSignIn")
             .WithSummary("Exchange an authenticated identity for a back-office session and audit the login.");
 

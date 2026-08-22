@@ -9,6 +9,9 @@ public interface ILuckyDrawRepository
     /// <summary>Tracked, for writes. Tickets are not loaded; ask the ticket repository for those.</summary>
     Task<LuckyDraw?> GetAsync(Guid id, CancellationToken cancellationToken = default);
 
+    /// <summary>Tracked row locked until the current transaction commits. Prevents overselling tickets.</summary>
+    Task<LuckyDraw?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
+
     /// <summary>Every draw the back office can see, newest first.</summary>
     Task<IReadOnlyList<LuckyDraw>> ListAsync(CancellationToken cancellationToken = default);
 
