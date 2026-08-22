@@ -40,6 +40,7 @@ internal static class MoVoqEndpoints
         v1.MapIdentityEndpoints();
         v1.MapStepsEndpoints();
         v1.MapLuckyDrawEndpoints();
+        v1.MapMarketplaceEndpoints();
         v1.MapAdminEndpoints();
     }
 

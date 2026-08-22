@@ -246,6 +246,41 @@ public sealed class StepsServiceTests
         Assert.Single(harness.Ledger.Items);
     }
 
+    [Fact]
+    public async Task Ten_thousand_steps_in_five_minutes_is_rejected()
+    {
+        var harness = new Harness(dailyGoal: 6000);
+        await harness.SyncAsync(Today, 1_000, deviceRecordedAt: Now);
+
+        var result = await harness.SyncAsync(
+            Today,
+            1_000 + StepRewardOptions.MaxStepsInFiveMinutes,
+            deviceRecordedAt: Now.AddMinutes(5));
+
+        Assert.Equal(ValidationStatus.Rejected, result.Day.ValidationStatus);
+        Assert.Equal(0, result.PointsCredited);
+        Assert.Empty(harness.Ledger.Items);
+        var signal = Assert.Single(harness.FraudSignals.Items);
+        Assert.Equal(FraudSignalType.ImpossibleStepRate, signal.SignalType);
+    }
+
+    [Fact]
+    public async Task A_device_clock_ahead_of_the_server_is_rejected()
+    {
+        var harness = new Harness(dailyGoal: 6000);
+
+        var result = await harness.SyncAsync(
+            Today,
+            6200,
+            deviceRecordedAt: Now.AddMinutes(StepRewardOptions.DeviceClockSkewMinutes + 1));
+
+        Assert.Equal(ValidationStatus.Rejected, result.Day.ValidationStatus);
+        Assert.Equal(0, result.PointsCredited);
+        Assert.Empty(harness.Ledger.Items);
+        var signal = Assert.Single(harness.FraudSignals.Items);
+        Assert.Equal(FraudSignalType.TamperedTimestamp, signal.SignalType);
+    }
+
     private sealed class Harness
     {
         public Harness(int dailyGoal, int? goalReward = null)
@@ -303,8 +338,14 @@ public sealed class StepsServiceTests
             });
         }
 
-        public Task<StepsSyncResultDto> SyncAsync(DateOnly date, int steps, Guid? commandId = null) =>
-            Sut.SyncAsync(Identity, new SyncStepsCommand(commandId ?? Guid.NewGuid(), date, steps, null, null));
+        public Task<StepsSyncResultDto> SyncAsync(
+            DateOnly date,
+            int steps,
+            Guid? commandId = null,
+            DateTime? deviceRecordedAt = null) =>
+            Sut.SyncAsync(
+                Identity,
+                new SyncStepsCommand(commandId ?? Guid.NewGuid(), date, steps, null, deviceRecordedAt));
     }
 
     private sealed class FixedTimeProvider(DateTime utcNow) : TimeProvider
@@ -321,6 +362,11 @@ public sealed class StepsServiceTests
     private sealed class FakeUnitOfWork : IUnitOfWork
     {
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => Task.FromResult(1);
+
+        public Task<T> ExecuteInTransactionAsync<T>(
+            Func<CancellationToken, Task<T>> action,
+            CancellationToken cancellationToken = default) =>
+            action(cancellationToken);
     }
 
     private sealed class FakeFraudSignalRepository : IFraudSignalRepository
@@ -393,6 +439,9 @@ public sealed class StepsServiceTests
         public List<UserWallet> Items { get; } = [];
 
         public void Add(UserWallet wallet) => Items.Add(wallet);
+
+        public Task LockByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     private sealed class FakeLedgerRepository : IPointsLedgerRepository

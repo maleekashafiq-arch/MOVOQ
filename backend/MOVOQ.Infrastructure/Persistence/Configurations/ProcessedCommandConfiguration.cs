@@ -14,6 +14,9 @@ internal sealed class ProcessedCommandConfiguration : IEntityTypeConfiguration<P
 
         builder.HasIndex(x => x.CommandId).IsUnique();
 
+        // The unique index is the real idempotency guarantee. The application check is a fast path;
+        // a second insert with the same CommandId is converted to DuplicateCommandException.
+
         builder.HasIndex(x => x.ProcessedAt);
 
         builder.Property(x => x.CommandType).HasMaxLength(128).IsRequired();

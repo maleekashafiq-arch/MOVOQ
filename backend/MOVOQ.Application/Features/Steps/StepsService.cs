@@ -43,6 +43,28 @@ public sealed class StepsService(
             return replay with { Duplicate = true };
         }
 
+        try
+        {
+            return await unitOfWork.ExecuteInTransactionAsync(
+                ct => ApplySyncAsync(user, command, now, today, ct),
+                cancellationToken);
+        }
+        catch (DuplicateCommandException)
+        {
+            var replay = await ReadStateAsync(user, command.StepDate, today, cancellationToken);
+            return replay with { Duplicate = true };
+        }
+    }
+
+    private async Task<StepsSyncResultDto> ApplySyncAsync(
+        User user,
+        SyncStepsCommand command,
+        DateTime now,
+        DateOnly today,
+        CancellationToken cancellationToken)
+    {
+        await wallets.LockByUserIdAsync(user.Id, cancellationToken);
+
         var record = await stepRecords.GetByUserAndDateAsync(user.Id, command.StepDate, cancellationToken);
         if (record is null)
         {
@@ -141,7 +163,14 @@ public sealed class StepsService(
         // Within a day a pedometer only counts up. A lower claim means a reboot or a second device,
         // so keep the high-water mark rather than letting the day regress.
         var claimed = Math.Max(record.ClaimedStepCount, command.StepCount);
-        var implausible = claimed > StepRewardOptions.MaxPlausibleDailySteps;
+        var previousCount = record.ValidatedStepCount ?? record.ClaimedStepCount;
+        var previousStamp = record.DeviceRecordedAt ?? record.SyncedAt;
+        var alreadyRejected = record.ValidationStatus == ValidationStatus.Rejected;
+
+        var clockTampered = IsDeviceClockTampered(command.DeviceRecordedAt, now);
+        var impossibleRate = IsImpossibleStepRate(claimed, previousCount, command.DeviceRecordedAt, previousStamp);
+        var implausibleDay = claimed > StepRewardOptions.MaxPlausibleDailySteps;
+        var rejected = implausibleDay || clockTampered || impossibleRate;
 
         record.ClaimedStepCount = claimed;
         record.DeviceRecordedAt = command.DeviceRecordedAt ?? now;
@@ -160,34 +189,95 @@ public sealed class StepsService(
             record.DeviceId = device?.Id ?? record.DeviceId;
         }
 
-        var alreadyRejected = record.ValidationStatus == ValidationStatus.Rejected;
-
         // The goal is frozen on the first sync of a day, so changing the target later cannot retroactively
         // complete or un-complete a day that is already in progress.
         record.DailyTargetStepsSnapshot ??= ActiveGoal(user);
         record.ValidatedStepCount = Math.Min(claimed, StepRewardOptions.MaxPlausibleDailySteps);
-        record.ValidationStatus = implausible ? ValidationStatus.Rejected : ValidationStatus.Validated;
+        record.ValidationStatus = rejected ? ValidationStatus.Rejected : ValidationStatus.Validated;
         record.ValidatedAt = now;
-        record.TargetCompleted = !implausible && record.ValidatedStepCount >= record.DailyTargetStepsSnapshot;
+        record.TargetCompleted = !rejected && record.ValidatedStepCount >= record.DailyTargetStepsSnapshot;
         record.PointsEligible = record.TargetCompleted;
 
-        // Raise the signal once per day, not on every retry of an already-rejected day.
-        if (implausible && !alreadyRejected)
+        if (rejected && !alreadyRejected)
         {
-            fraudSignals.Add(new FraudSignal
-            {
-                UserId = user.Id,
-                User = user,
-                SignalType = FraudSignalType.AbnormalStepCount,
-                Severity = FraudSignalSeverity.High,
-                Description =
-                    $"Claimed {claimed:N0} steps on {record.StepDate:yyyy-MM-dd}, above the plausible daily maximum of {StepRewardOptions.MaxPlausibleDailySteps:N0}.",
-                ReferenceType = nameof(DailyStepRecord),
-                ReferenceId = record.Id,
-                DetectedAt = now,
-                CreatedAt = now,
-            });
+            RaiseStepFraud(user, record, claimed, implausibleDay, clockTampered, impossibleRate, now);
         }
+    }
+
+    private void RaiseStepFraud(
+        User user,
+        DailyStepRecord record,
+        int claimed,
+        bool implausibleDay,
+        bool clockTampered,
+        bool impossibleRate,
+        DateTime now)
+    {
+        var (type, description) = (implausibleDay, clockTampered, impossibleRate) switch
+        {
+            (_, true, _) => (
+                FraudSignalType.TamperedTimestamp,
+                $"Device timestamp is more than {StepRewardOptions.DeviceClockSkewMinutes} minutes ahead of the server."),
+            (_, _, true) => (
+                FraudSignalType.ImpossibleStepRate,
+                $"Claimed {claimed:N0} steps on {record.StepDate:yyyy-MM-dd} faster than {StepRewardOptions.MaxPlausibleStepsPerMinute} steps/minute."),
+            _ => (
+                FraudSignalType.AbnormalStepCount,
+                $"Claimed {claimed:N0} steps on {record.StepDate:yyyy-MM-dd}, above the plausible daily maximum of {StepRewardOptions.MaxPlausibleDailySteps:N0}."),
+        };
+
+        fraudSignals.Add(new FraudSignal
+        {
+            UserId = user.Id,
+            User = user,
+            SignalType = type,
+            Severity = FraudSignalSeverity.High,
+            Description = description,
+            ReferenceType = nameof(DailyStepRecord),
+            ReferenceId = record.Id,
+            DetectedAt = now,
+            CreatedAt = now,
+        });
+    }
+
+    private static bool IsDeviceClockTampered(DateTime? deviceRecordedAt, DateTime now) =>
+        deviceRecordedAt is DateTime recorded
+        && recorded > now.AddMinutes(StepRewardOptions.DeviceClockSkewMinutes);
+
+    private static bool IsImpossibleStepRate(
+        int claimed,
+        int previousCount,
+        DateTime? deviceRecordedAt,
+        DateTime? previousStamp)
+    {
+        if (deviceRecordedAt is not DateTime recorded || previousStamp is not DateTime previous)
+        {
+            return false;
+        }
+
+        var delta = claimed - previousCount;
+        if (delta <= 0)
+        {
+            return false;
+        }
+
+        var elapsed = recorded - previous;
+        if (elapsed <= TimeSpan.Zero)
+        {
+            return delta > StepRewardOptions.MaxPlausibleStepsPerMinute;
+        }
+
+        if (elapsed.TotalMinutes <= 5 && delta >= StepRewardOptions.MaxStepsInFiveMinutes)
+        {
+            return true;
+        }
+
+        if (elapsed.TotalSeconds < 30)
+        {
+            return false;
+        }
+
+        return delta / elapsed.TotalMinutes > StepRewardOptions.MaxPlausibleStepsPerMinute;
     }
 
     private long AwardGoalPointsIfDue(User user, DailyStepRecord record, int reward, DateTime now)

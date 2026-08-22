@@ -1,3 +1,4 @@
+using MOVOQ.Domain.Entities;
 using MOVOQ.Shared;
 
 namespace MOVOQ.Application.Abstractions.Persistence;
@@ -6,6 +7,12 @@ public sealed record RedemptionCount(Guid Id, int Count);
 
 public interface IRewardRedemptionRepository
 {
+    void Add(RewardRedemption redemption);
+
+    Task<IReadOnlyList<RewardRedemption>> ListForUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<RedemptionCount>> CountByRewardAsync(
         IReadOnlyCollection<Guid> rewardIds,
         CancellationToken cancellationToken = default);

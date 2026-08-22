@@ -47,6 +47,29 @@ public sealed class MovoqDbContext(DbContextOptions<MovoqDbContext> options) : D
 
     public DbSet<ProcessedCommand> ProcessedCommands => Set<ProcessedCommand>();
 
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        StampVersions();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        StampVersions();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void StampVersions()
+    {
+        foreach (var entry in ChangeTracker.Entries<BaseEntity>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.Entity.Version++;
+            }
+        }
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

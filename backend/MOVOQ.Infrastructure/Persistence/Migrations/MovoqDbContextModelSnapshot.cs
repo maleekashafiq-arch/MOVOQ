@@ -1159,6 +1159,7 @@ namespace MOVOQ.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<int>("Version")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -1166,7 +1167,10 @@ namespace MOVOQ.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("user_wallets", (string)null);
+                    b.ToTable("user_wallets", t =>
+                        {
+                            t.HasCheckConstraint("ck_user_wallets_balance_non_negative", "\"Balance\" >= 0");
+                        });
                 });
 
             modelBuilder.Entity("MOVOQ.Domain.Entities.AdsWatched", b =>

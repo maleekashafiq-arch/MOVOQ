@@ -107,6 +107,22 @@ public sealed class AdminUsersService(
         var user = await users.GetByIdForIdentityAsync(userId, cancellationToken) ?? throw NotFound(userId);
         var now = timeProvider.GetUtcNow().UtcDateTime;
 
+        return await unitOfWork.ExecuteInTransactionAsync(
+            async ct =>
+            {
+                await wallets.LockByUserIdAsync(user.Id, ct);
+                return await AdjustLockedWalletAsync(admin, user, command, now, ct);
+            },
+            cancellationToken);
+    }
+
+    private async Task<AdjustPointsResultDto> AdjustLockedWalletAsync(
+        AdminContext admin,
+        User user,
+        AdjustPointsCommand command,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
         var wallet = user.Wallet;
         if (wallet is null)
         {

@@ -1,11 +1,25 @@
 using Microsoft.EntityFrameworkCore;
 using MOVOQ.Application.Abstractions.Persistence;
+using MOVOQ.Domain.Entities;
 using MOVOQ.Shared;
 
 namespace MOVOQ.Infrastructure.Persistence.Repositories;
 
 internal sealed class RewardRedemptionRepository(MovoqDbContext db) : IRewardRedemptionRepository
 {
+    public void Add(RewardRedemption redemption) => db.RewardRedemptions.Add(redemption);
+
+    public async Task<IReadOnlyList<RewardRedemption>> ListForUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default) =>
+        await db.RewardRedemptions
+            .AsNoTracking()
+            .Include(x => x.Reward)
+            .ThenInclude(r => r.Sponsor)
+            .Where(x => x.UserId == userId)
+            .OrderByDescending(x => x.RequestedAt)
+            .ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<RedemptionCount>> CountByRewardAsync(
         IReadOnlyCollection<Guid> rewardIds,
         CancellationToken cancellationToken = default)

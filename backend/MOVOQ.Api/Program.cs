@@ -36,6 +36,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICallerContext, HttpCallerContext>();
 builder.Services.AddMoVoqAuthentication(builder.Configuration, builder.Environment);
+builder.Services.AddMoVoqRateLimiting(builder.Environment);
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
@@ -57,6 +58,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMoVoqRateLimiting();
 
 await PersistenceStartup.ApplyMigrationsIfEnabledAsync(app.Services, app.Configuration);
 await DevEndpoints.SeedIfDevelopmentAsync(app);
