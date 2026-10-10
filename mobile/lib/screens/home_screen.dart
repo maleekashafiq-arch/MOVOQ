@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/current_user.dart';
+import '../models/daily_steps.dart';
+import '../services/outdoor_conditions.dart';
 import '../services/steps_controller.dart';
 import '../theme.dart';
 import '../widgets/progress_circle.dart';
@@ -17,22 +19,52 @@ String _fmt(int value) {
   return buffer.toString();
 }
 
+IconData _weatherIcon(OutdoorConditions outdoor) {
+  if (outdoor.status == OutdoorStatus.locationOff) {
+    return Icons.location_off_outlined;
+  }
+  final code = outdoor.weatherCode;
+  if (code == null) {
+    return Icons.cloud_outlined;
+  }
+  if (code == 0) {
+    return Icons.wb_sunny_rounded;
+  }
+  if (code <= 3) {
+    return Icons.wb_cloudy_rounded;
+  }
+  if (code == 45 || code == 48) {
+    return Icons.blur_on;
+  }
+  if (code <= 67) {
+    return Icons.water_drop_rounded;
+  }
+  if (code <= 77) {
+    return Icons.ac_unit_rounded;
+  }
+  if (code <= 82) {
+    return Icons.grain;
+  }
+  if (code >= 95) {
+    return Icons.thunderstorm_rounded;
+  }
+  return Icons.cloud_rounded;
+}
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({
     super.key,
     required this.user,
     required this.steps,
+    required this.outdoor,
     required this.onComingSoon,
-    required this.onOpenLuckyDraw,
   });
 
   final CurrentUser? user;
   final StepsController steps;
+  final OutdoorConditions outdoor;
   final void Function(String title) onComingSoon;
-  final VoidCallback onOpenLuckyDraw;
 
-  static const _mockTemp = 26;
-  static const _mockAqi = 45;
   static const _goalReward = 50;
 
   String get _greeting {
@@ -57,7 +89,7 @@ class HomeScreen extends StatelessWidget {
     return DecoratedBox(
       decoration: const BoxDecoration(gradient: MovoqTheme.pageGradient),
       child: RefreshIndicator(
-        onRefresh: steps.refresh,
+        onRefresh: () => Future.wait([steps.refresh(), outdoor.refresh()]),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.only(bottom: 24),
@@ -67,14 +99,15 @@ class HomeScreen extends StatelessWidget {
               name: name,
               points: points,
               city: city,
+              outdoor: outdoor,
               onPointsTap: () => onComingSoon('Wallet'),
+              onEnableLocation: outdoor.enableLocation,
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Column(
                 children: [
                 _StepsStatusCard(steps: steps),
-                _LuckyDrawBanner(onTap: onOpenLuckyDraw),
                 const SizedBox(height: 16),
                 _DailyGoalCard(
                   steps: steps.todaySteps,
@@ -83,6 +116,10 @@ class HomeScreen extends StatelessWidget {
                   milestones: milestones,
                   syncing: steps.syncing,
                 ),
+                if (steps.history != null && steps.history!.days.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _WeekHistoryCard(history: steps.history!),
+                ],
                 const SizedBox(height: 16),
                 Row(
                   children: [
@@ -215,7 +252,13 @@ class _Banner extends StatelessWidget {
             const SizedBox(width: 8),
             FilledButton(
               onPressed: onAction,
-              style: FilledButton.styleFrom(backgroundColor: color),
+              // The app theme gives FilledButton an infinite min width; inside a Row that
+              // must be overridden with a finite size or layout throws.
+              style: FilledButton.styleFrom(
+                backgroundColor: color,
+                minimumSize: const Size(0, 44),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+              ),
               child: Text(actionLabel!),
             ),
           ],
@@ -231,14 +274,57 @@ class _Header extends StatelessWidget {
     required this.name,
     required this.points,
     required this.city,
+    required this.outdoor,
     required this.onPointsTap,
+    required this.onEnableLocation,
   });
 
   final String greeting;
   final String name;
   final int points;
   final String city;
+  final OutdoorConditions outdoor;
   final VoidCallback onPointsTap;
+  final VoidCallback onEnableLocation;
+
+  String get _conditionsLine {
+    if (outdoor.status == OutdoorStatus.locationOff) {
+      return outdoor.message ?? 'Turn on location to see weather and air quality for your walk';
+    }
+    if (outdoor.status == OutdoorStatus.loading && outdoor.temperatureC == null) {
+      return 'Checking weather for your location…';
+    }
+    if (outdoor.temperatureC == null) {
+      return outdoor.message ?? 'Weather is unavailable for this location';
+    }
+    final aqi = outdoor.aqi;
+    if (aqi != null && aqi > 150) {
+      return 'Air quality is poor in $city today — try indoor steps';
+    }
+    if (aqi != null && aqi > 100) {
+      return 'Air quality is moderate in $city — a shorter outdoor walk is kinder today';
+    }
+    return 'Great weather in $city for a 5K outdoor walk';
+  }
+
+  String get _temperatureLabel {
+    final temperature = outdoor.temperatureC;
+    if (temperature == null) {
+      return outdoor.status == OutdoorStatus.loading ? '…' : '—';
+    }
+    return '${temperature.round()}°C';
+  }
+
+  String get _aqiLabel {
+    if (outdoor.status == OutdoorStatus.locationOff) {
+      return 'Location off';
+    }
+    final aqi = outdoor.aqi;
+    if (aqi == null) {
+      return outdoor.status == OutdoorStatus.loading ? 'AQI' : 'AQI —';
+    }
+    return 'AQI: $aqi';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -275,104 +361,42 @@ class _Header extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text('${HomeScreen._mockTemp}°C', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-                      Text('AQI: ${HomeScreen._mockAqi}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                    ],
+                  InkWell(
+                    onTap: outdoor.status == OutdoorStatus.ready ? null : onEnableLocation,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(_temperatureLabel, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+                        Text(_aqiLabel, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                      ],
+                    ),
                   ),
                   const SizedBox(width: 8),
-                  Icon(Icons.cloud, color: Colors.blue.shade300, size: 32),
+                  Icon(_weatherIcon(outdoor), color: Colors.blue.shade300, size: 32),
                 ],
               ),
               const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0x1A3B82F6),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFBFDBFE)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.auto_awesome, size: 16, color: Color(0xFF2563EB)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        HomeScreen._mockAqi > 150
-                            ? 'Air quality is poor in $city today — try indoor steps'
-                            : 'Great weather in $city for a 5K outdoor walk',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LuckyDrawBanner extends StatelessWidget {
-  const _LuckyDrawBanner({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF06B6D4), Color(0xFF14B8A6)]),
-            boxShadow: const [BoxShadow(color: Color(0x403B82F6), blurRadius: 18, offset: Offset(0, 8))],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: Stack(
-              children: [
-                const Positioned(top: -40, right: -20, child: _GlowCircle(size: 140)),
-                const Positioned(bottom: -30, left: -20, child: _GlowCircle(size: 100)),
-                Padding(
-                  padding: const EdgeInsets.all(20),
+              InkWell(
+                onTap: outdoor.status == OutdoorStatus.locationOff ? onEnableLocation : null,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0x1A3B82F6),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                  ),
                   child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(16)),
-                        child: const Icon(Icons.confirmation_number_rounded, color: Colors.white, size: 32),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('✦ GRAND PRIZE', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-                            Text('Lucky Draw', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
-                            Text('Win iPhone, Cash & More!', style: TextStyle(color: Colors.white70)),
-                          ],
-                        ),
-                      ),
-                      const Column(
-                        children: [
-                          Icon(Icons.auto_awesome, color: Colors.white, size: 28),
-                          Text('Tap to Enter', style: TextStyle(color: Colors.white, fontSize: 11)),
-                        ],
-                      ),
+                      const Icon(Icons.auto_awesome, size: 16, color: Color(0xFF2563EB)),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(_conditionsLine, style: const TextStyle(fontSize: 13))),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -553,6 +577,65 @@ class _ActionCard extends StatelessWidget {
   }
 }
 
+class _WeekHistoryCard extends StatelessWidget {
+  const _WeekHistoryCard({required this.history});
+
+  final StepsHistory history;
+
+  @override
+  Widget build(BuildContext context) {
+    final days = history.days;
+    final maxSteps = days.fold<int>(0, (best, day) => day.steps > best ? day.steps : best);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Last ${days.length} days', style: const TextStyle(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text(
+            '${_fmt(history.totalSteps)} steps · ${history.totalPointsAwarded} pts',
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              for (final day in days)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: Column(
+                      children: [
+                        Container(
+                          height: maxSteps == 0 ? 8 : 8 + (48 * day.steps / maxSteps),
+                          decoration: BoxDecoration(
+                            color: day.goalCompleted ? MovoqTheme.indigo : const Color(0xFFDBEAFE),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '${day.stepDate.day}',
+                          style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StreakCard extends StatelessWidget {
   const _StreakCard({required this.streak, required this.onWatchAd});
 
@@ -636,21 +719,6 @@ class _StreakCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _GlowCircle extends StatelessWidget {
-  const _GlowCircle({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), shape: BoxShape.circle),
     );
   }
 }

@@ -38,9 +38,11 @@ class StepsController extends ChangeNotifier {
 
   StepsPermission permission = StepsPermission.unknown;
   DailySteps? today;
+  StepsHistory? history;
   int walletBalance = 0;
   int streak = 0;
   bool syncing = false;
+  bool _deviceRegistered = false;
   String? error;
 
   /// What the phone has counted so far, which may be ahead of the last server verdict.
@@ -62,7 +64,9 @@ class StepsController extends ChangeNotifier {
     _outbox ??= StepsOutbox(_prefs!);
     _simulatedSteps = _counter!.simulated;
 
+    await _registerDevice();
     await _pullToday();
+    await _pullHistory();
     await _listenToSensor();
     await _flush();
 
@@ -71,6 +75,7 @@ class StepsController extends ChangeNotifier {
 
   Future<void> refresh() async {
     await _pullToday();
+    await _pullHistory();
     await _flush();
   }
 
@@ -151,6 +156,35 @@ class StepsController extends ChangeNotifier {
     }
     final since = _lastSyncAt;
     return since == null || DateTime.now().difference(since) >= const Duration(minutes: 5);
+  }
+
+  Future<void> _registerDevice() async {
+    if (_deviceRegistered) {
+      return;
+    }
+    try {
+      final token = await _session.apiToken();
+      await _session.api.registerDevice(
+        idToken: token,
+        deviceIdentifier: await _deviceIdentifier(),
+        platform: _platformName,
+        commandId: newCommandId(),
+      );
+      _deviceRegistered = true;
+    } catch (_) {
+      // Device registration is best-effort; step sync still sends the identifier.
+    }
+  }
+
+  Future<void> _pullHistory() async {
+    try {
+      final token = await _session.apiToken();
+      history = await _session.api.getStepsHistory(token, days: 7);
+      if (history != null) {
+        streak = history!.currentStreak;
+      }
+      notifyListeners();
+    } catch (_) {}
   }
 
   Future<void> _pullToday() async {
@@ -243,6 +277,19 @@ class StepsController extends ChangeNotifier {
       await prefs.setString(_deviceIdKey, id);
     }
     return id;
+  }
+
+  String get _platformName {
+    if (kIsWeb) {
+      return 'Web';
+    }
+    if (Platform.isIOS) {
+      return 'Ios';
+    }
+    if (Platform.isAndroid) {
+      return 'Android';
+    }
+    return 'Unknown';
   }
 
   Permission get _motionPermission =>

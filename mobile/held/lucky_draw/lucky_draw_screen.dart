@@ -1,4 +1,11 @@
+// Parked outside lib/ so the running app does not include Lucky Draw.
 import 'package:flutter/material.dart';
+import 'package:movoq/services/api_client.dart';
+import 'package:movoq/services/ids.dart';
+import 'package:movoq/services/session_controller.dart';
+
+import 'lucky_draw.dart';
+import 'lucky_draw_api.dart';
 
 String _fmt(int value) {
   final digits = value.toString();
@@ -12,101 +19,110 @@ String _fmt(int value) {
   return buffer.toString();
 }
 
-class _Prize {
-  const _Prize({
-    required this.id,
-    required this.name,
-    required this.emoji,
-    required this.ticketCost,
-    required this.participants,
-    required this.endTime,
-    this.featured = false,
-  });
-
-  final int id;
-  final String name;
-  final String emoji;
-  final int ticketCost;
-  final int participants;
-  final String endTime;
-  final bool featured;
-}
-
 class LuckyDrawScreen extends StatefulWidget {
-  const LuckyDrawScreen({super.key, required this.points});
+  const LuckyDrawScreen({super.key, required this.session});
 
-  final int points;
+  final SessionController session;
 
   @override
   State<LuckyDrawScreen> createState() => _LuckyDrawScreenState();
 }
 
 class _LuckyDrawScreenState extends State<LuckyDrawScreen> {
-  static const _prizes = [
-    _Prize(
-      id: 1,
-      name: 'iPhone 15 Pro',
-      emoji: '📱',
-      ticketCost: 100,
-      participants: 1234,
-      endTime: '2 days 14 hours',
-      featured: true,
-    ),
-    _Prize(
-      id: 2,
-      name: 'AirPods Pro',
-      emoji: '🎧',
-      ticketCost: 50,
-      participants: 892,
-      endTime: '5 days 3 hours',
-    ),
-    _Prize(
-      id: 3,
-      name: 'Smart Watch',
-      emoji: '⌚',
-      ticketCost: 75,
-      participants: 654,
-      endTime: '1 day 8 hours',
-    ),
-    _Prize(
-      id: 4,
-      name: 'PKR 10,000 Cash',
-      emoji: '💰',
-      ticketCost: 150,
-      participants: 2156,
-      endTime: '3 days 20 hours',
-    ),
-  ];
+  LuckyDrawList? _list;
+  String? _error;
+  bool _loading = true;
+  String? _buyingId;
 
-  late int _points;
-  int? _purchasedId;
-  final Map<int, int> _tickets = {};
+  int get _points => _list?.walletBalance ?? widget.session.user?.walletBalance ?? 0;
 
   @override
   void initState() {
     super.initState();
-    _points = widget.points;
+    _load();
   }
 
-  Future<void> _buy(_Prize prize) async {
-    if (_points < prize.ticketCost || _purchasedId != null) {
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final list = await LuckyDrawApi(widget.session.api).listLuckyDraws(await widget.session.apiToken());
+      widget.session.applyWalletBalance(list.walletBalance);
+      if (mounted) {
+        setState(() {
+          _list = list;
+          _loading = false;
+        });
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.message;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error = 'Could not load draws.';
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _buy(LuckyDraw draw) async {
+    if (_buyingId != null || _points < draw.ticketCostPoints) {
       return;
     }
 
-    setState(() {
-      _points -= prize.ticketCost;
-      _purchasedId = prize.id;
-      _tickets[prize.id] = (_tickets[prize.id] ?? 0) + 1;
-    });
-
-    await Future<void>.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      setState(() => _purchasedId = null);
+    setState(() => _buyingId = draw.id);
+    try {
+      final result = await LuckyDrawApi(widget.session.api).buyLuckyDrawTicket(
+        idToken: await widget.session.apiToken(),
+        drawId: draw.id,
+        commandId: newCommandId(),
+      );
+      widget.session.applyWalletBalance(result.walletBalance);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _list = LuckyDrawList(
+          draws: (_list?.draws ?? const []).map((item) {
+            if (item.id != draw.id) {
+              return item;
+            }
+            return item.copyWith(myTickets: result.myTickets, totalTickets: result.totalTickets);
+          }).toList(),
+          walletBalance: result.walletBalance,
+          ticketsBoughtToday: (_list?.ticketsBoughtToday ?? 0) + (result.duplicate ? 0 : 1),
+          maxTicketsPerDay: _list?.maxTicketsPerDay ?? 0,
+        );
+        _buyingId = null;
+      });
+      final numbers = result.ticketNumbers.isEmpty ? '' : ' Ticket ${result.ticketNumbers.first}.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.duplicate ? 'Already recorded.' : 'Ticket bought.$numbers')),
+      );
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() => _buyingId = null);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _buyingId = null);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final draws = _list?.draws ?? const <LuckyDraw>[];
+
     return Scaffold(
       body: DecoratedBox(
         decoration: const BoxDecoration(
@@ -120,21 +136,34 @@ class _LuckyDrawScreenState extends State<LuckyDrawScreen> {
           children: [
             _Header(points: _points),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-                children: [
-                  for (final prize in _prizes) ...[
-                    _PrizeCard(
-                      prize: prize,
-                      points: _points,
-                      purchased: _purchasedId == prize.id,
-                      ticketsOwned: _tickets[prize.id] ?? 0,
-                      onBuy: () => _buy(prize),
-                    ),
-                    const SizedBox(height: 16),
+              child: RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+                  children: [
+                    if (_loading && _list == null)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 48),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    if (_error != null) ...[
+                      Text(_error!, style: const TextStyle(color: Color(0xFFEF4444))),
+                      TextButton(onPressed: _load, child: const Text('Retry')),
+                    ],
+                    if (!_loading && _error == null && draws.isEmpty)
+                      const Text('No open draws right now. Create one in the admin app.'),
+                    for (final draw in draws) ...[
+                      _PrizeCard(
+                        draw: draw,
+                        points: _points,
+                        buying: _buyingId == draw.id,
+                        onBuy: () => _buy(draw),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    const _HowItWorksCard(),
                   ],
-                  const _HowItWorksCard(),
-                ],
+                ),
               ),
             ),
           ],
@@ -195,8 +224,8 @@ class _Header extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Weekly Grand Prize', style: TextStyle(color: Colors.white70)),
-                          Text('Win Amazing Rewards!', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                          Text('Open draws', style: TextStyle(color: Colors.white70)),
+                          Text('Buy tickets with your points', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
                         ],
                       ),
                     ),
@@ -213,34 +242,32 @@ class _Header extends StatelessWidget {
 
 class _PrizeCard extends StatelessWidget {
   const _PrizeCard({
-    required this.prize,
+    required this.draw,
     required this.points,
-    required this.purchased,
-    required this.ticketsOwned,
+    required this.buying,
     required this.onBuy,
   });
 
-  final _Prize prize;
+  final LuckyDraw draw;
   final int points;
-  final bool purchased;
-  final int ticketsOwned;
+  final bool buying;
   final VoidCallback onBuy;
 
   @override
   Widget build(BuildContext context) {
-    final canBuy = points >= prize.ticketCost && !purchased;
+    final canBuy = points >= draw.ticketCostPoints && !buying;
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
-        border: prize.featured ? Border.all(color: const Color(0xFF22D3EE), width: 3) : null,
+        border: draw.featured ? Border.all(color: const Color(0xFF22D3EE), width: 3) : null,
         boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 18, offset: Offset(0, 8))],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          if (prize.featured)
+          if (draw.featured)
             const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF06B6D4), Color(0xFF14B8A6)]),
@@ -272,20 +299,22 @@ class _PrizeCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                         gradient: const LinearGradient(colors: [Color(0xFFDBEAFE), Color(0xFFCFFAFE)]),
                       ),
-                      child: Center(child: Text(prize.emoji, style: const TextStyle(fontSize: 40))),
+                      child: Center(child: Text(draw.emoji ?? '🎁', style: const TextStyle(fontSize: 40))),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(prize.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                          Text(draw.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 4),
+                          Text(draw.prizeDescription, style: TextStyle(color: Colors.grey.shade600)),
                           const SizedBox(height: 8),
                           Row(
                             children: [
                               const Icon(Icons.groups_rounded, size: 16, color: Color(0xFF06B6D4)),
                               const SizedBox(width: 6),
-                              Text('${_fmt(prize.participants)} participants', style: TextStyle(color: Colors.grey.shade600)),
+                              Text('${_fmt(draw.participants)} participants', style: TextStyle(color: Colors.grey.shade600)),
                             ],
                           ),
                           const SizedBox(height: 4),
@@ -293,13 +322,13 @@ class _PrizeCard extends StatelessWidget {
                             children: [
                               const Icon(Icons.schedule_rounded, size: 16, color: Color(0xFF06B6D4)),
                               const SizedBox(width: 6),
-                              Text('Ends in ${prize.endTime}', style: TextStyle(color: Colors.grey.shade600)),
+                              Text('Ends in ${draw.endsIn}', style: TextStyle(color: Colors.grey.shade600)),
                             ],
                           ),
-                          if (ticketsOwned > 0) ...[
+                          if (draw.myTickets > 0) ...[
                             const SizedBox(height: 4),
                             Text(
-                              'Your tickets: $ticketsOwned',
+                              'Your tickets: ${draw.myTickets}',
                               style: const TextStyle(color: Color(0xFF0F766E), fontWeight: FontWeight.w700, fontSize: 13),
                             ),
                           ],
@@ -327,7 +356,7 @@ class _PrizeCard extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('Ticket Cost', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-                                Text('${prize.ticketCost} points', style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF0E7490))),
+                                Text('${draw.ticketCostPoints} points', style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF0E7490))),
                               ],
                             ),
                           ],
@@ -339,15 +368,15 @@ class _PrizeCard extends StatelessWidget {
                       onPressed: canBuy ? onBuy : null,
                       style: FilledButton.styleFrom(
                         minimumSize: const Size(120, 52),
-                        backgroundColor: purchased ? const Color(0xFF2DD4BF) : const Color(0xFF06B6D4),
-                        disabledBackgroundColor: purchased ? const Color(0xFF2DD4BF) : const Color(0xFFD1D5DB),
-                        disabledForegroundColor: purchased ? Colors.white : Colors.white70,
+                        backgroundColor: buying ? const Color(0xFF2DD4BF) : const Color(0xFF06B6D4),
+                        disabledBackgroundColor: buying ? const Color(0xFF2DD4BF) : const Color(0xFFD1D5DB),
+                        disabledForegroundColor: buying ? Colors.white : Colors.white70,
                       ),
-                      child: Text(purchased ? 'Purchased!' : 'Buy Ticket'),
+                      child: Text(buying ? 'Buying…' : 'Buy Ticket'),
                     ),
                   ],
                 ),
-                if (points < prize.ticketCost) ...[
+                if (points < draw.ticketCostPoints) ...[
                   const SizedBox(height: 8),
                   const Text('Not enough points', style: TextStyle(color: Color(0xFFEF4444), fontSize: 12)),
                 ],
@@ -387,7 +416,7 @@ class _HowItWorksCard extends StatelessWidget {
           SizedBox(height: 6),
           Text('• Each ticket gives you one entry'),
           SizedBox(height: 6),
-          Text('• Winners announced when timer ends'),
+          Text('• Winners announced when the draw closes'),
           SizedBox(height: 6),
           Text('• Buy multiple tickets to increase chances'),
         ],

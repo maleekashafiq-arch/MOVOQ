@@ -16,7 +16,30 @@ class SessionController extends ChangeNotifier {
   SessionController({ApiClient? api}) : _api = api ?? ApiClient();
 
   final ApiClient _api;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  FirebaseAuth? _authInstance;
+
+  /// Resolved lazily: `FirebaseAuth.instance` throws when no Firebase app was
+  /// initialised (e.g. a local build without google-services.json), and that
+  /// must not take the whole app down before `runApp`.
+  FirebaseAuth? get _auth {
+    if (_authInstance != null) {
+      return _authInstance;
+    }
+    try {
+      _authInstance = FirebaseAuth.instance;
+    } catch (_) {
+      _authInstance = null;
+    }
+    return _authInstance;
+  }
+
+  FirebaseAuth _requireAuth() {
+    final auth = _auth;
+    if (auth == null) {
+      throw ApiException('Sign-in is not configured on this build.');
+    }
+    return auth;
+  }
 
   static const _localIdentityKey = 'movoq_local_identity';
 
@@ -32,7 +55,7 @@ class SessionController extends ChangeNotifier {
 
     late final User? firebaseUser;
     try {
-      firebaseUser = _auth.currentUser;
+      firebaseUser = _auth?.currentUser;
     } catch (_) {
       if (AppConfig.isLocalDev) {
         await enterLocalPreview();
@@ -133,14 +156,14 @@ class SessionController extends ChangeNotifier {
 
   Future<void> signInWithEmail(String email, String password) async {
     await _run(() async {
-      await _auth.signInWithEmailAndPassword(email: email.trim(), password: password);
+      await _requireAuth().signInWithEmailAndPassword(email: email.trim(), password: password);
       await _syncWithApi();
     }, fallbackLocal: true);
   }
 
   Future<void> signUpWithEmail(String email, String password) async {
     await _run(() async {
-      await _auth.createUserWithEmailAndPassword(email: email.trim(), password: password);
+      await _requireAuth().createUserWithEmailAndPassword(email: email.trim(), password: password);
       await _syncWithApi();
     }, fallbackLocal: true);
   }
@@ -152,7 +175,7 @@ class SessionController extends ChangeNotifier {
       final account = await google.authenticate();
       final tokens = account.authentication;
       final credential = GoogleAuthProvider.credential(idToken: tokens.idToken);
-      await _auth.signInWithCredential(credential);
+      await _requireAuth().signInWithCredential(credential);
       await _syncWithApi();
     }, fallbackLocal: true);
   }
@@ -183,7 +206,9 @@ class SessionController extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
-    await _auth.signOut();
+    try {
+      await _auth?.signOut();
+    } catch (_) {}
     try {
       await GoogleSignIn.instance.signOut();
     } catch (_) {}
@@ -211,7 +236,7 @@ class SessionController extends ChangeNotifier {
   /// works without a Firebase sign-in.
   Future<String> apiToken() async {
     try {
-      final token = await _auth.currentUser?.getIdToken();
+      final token = await _auth?.currentUser?.getIdToken();
       if (token != null && token.isNotEmpty) {
         return token;
       }
@@ -220,6 +245,14 @@ class SessionController extends ChangeNotifier {
       return 'test';
     }
     throw ApiException('You are not signed in.');
+  }
+
+  /// Reloads the signed-in user without treating it as a new login.
+  Future<void> refreshUser() async {
+    try {
+      user = await _api.getMe(await apiToken());
+      notifyListeners();
+    } catch (_) {}
   }
 
   /// Keeps the header points in step with a balance the server just recalculated.
@@ -233,7 +266,7 @@ class SessionController extends ChangeNotifier {
   }
 
   Future<String> _requireToken() async {
-    final token = await _auth.currentUser?.getIdToken();
+    final token = await _auth?.currentUser?.getIdToken();
     if (token == null || token.isEmpty) {
       throw ApiException('You are not signed in.');
     }

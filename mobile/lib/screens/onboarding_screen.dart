@@ -28,7 +28,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _Slide(
       icon: Icons.card_giftcard,
       title: 'Redeem Points & Win Prizes',
-      description: 'Use your points for lucky draws, marketplace rewards, and exciting prizes!',
+      description: 'Use your points for marketplace rewards and exciting prizes!',
       colors: [Color(0xFF22C55E), Color(0xFF10B981)],
     ),
   ];

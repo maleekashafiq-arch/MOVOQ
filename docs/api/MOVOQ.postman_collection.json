@@ -1,0 +1,259 @@
+{
+  "info": {
+    "name": "MOVOQ API",
+    "description": "Local Development collection. Import into Postman, set baseUrl to http://localhost:5014, and keep the API running with the http launch profile.\n\nAuth: Development accepts Bearer test plus the X-Test-* headers. Production uses a Firebase ID token in Authorization.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5014" },
+    { "key": "token", "value": "test" },
+    { "key": "drawId", "value": "" },
+    { "key": "rewardId", "value": "" },
+    { "key": "userId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Health",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/health" }
+        },
+        {
+          "name": "API v1 meta",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1" }
+        }
+      ]
+    },
+    {
+      "name": "Identity",
+      "item": [
+        {
+          "name": "Exchange session",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Test-Firebase-Uid", "value": "local-dev-user" },
+              { "key": "X-Test-Email", "value": "dev@localhost" },
+              { "key": "X-Test-Email-Verified", "value": "true" },
+              { "key": "X-Test-Name", "value": "Local Walker" }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/session"
+          }
+        },
+        {
+          "name": "Get current user",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Test-Firebase-Uid", "value": "local-dev-user" },
+              { "key": "X-Test-Email", "value": "dev@localhost" },
+              { "key": "X-Test-Email-Verified", "value": "true" }
+            ],
+            "url": "{{baseUrl}}/api/v1/me"
+          }
+        },
+        {
+          "name": "Register device",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Test-Firebase-Uid", "value": "local-dev-user" },
+              { "key": "X-Test-Email", "value": "dev@localhost" },
+              { "key": "X-Test-Email-Verified", "value": "true" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceIdentifier\": \"postman-device-1\",\n  \"platform\": \"Android\",\n  \"commandId\": \"11111111-1111-4111-8111-111111111111\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/me/devices"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Steps",
+      "item": [
+        {
+          "name": "Today",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Test-Firebase-Uid", "value": "local-dev-user" },
+              { "key": "X-Test-Email", "value": "dev@localhost" },
+              { "key": "X-Test-Email-Verified", "value": "true" }
+            ],
+            "url": "{{baseUrl}}/api/v1/steps/today"
+          }
+        },
+        {
+          "name": "History",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Test-Firebase-Uid", "value": "local-dev-user" },
+              { "key": "X-Test-Email", "value": "dev@localhost" },
+              { "key": "X-Test-Email-Verified", "value": "true" }
+            ],
+            "url": "{{baseUrl}}/api/v1/steps/history?days=7"
+          }
+        },
+        {
+          "name": "Sync today",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Test-Firebase-Uid", "value": "local-dev-user" },
+              { "key": "X-Test-Email", "value": "dev@localhost" },
+              { "key": "X-Test-Email-Verified", "value": "true" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"commandId\": \"22222222-2222-4222-8222-222222222222\",\n  \"stepDate\": \"2026-08-16\",\n  \"stepCount\": 6500,\n  \"deviceIdentifier\": \"postman-device-1\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/steps/sync"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lucky draws",
+      "item": [
+        {
+          "name": "List open draws",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Test-Firebase-Uid", "value": "local-dev-user" },
+              { "key": "X-Test-Email", "value": "dev@localhost" },
+              { "key": "X-Test-Email-Verified", "value": "true" }
+            ],
+            "url": "{{baseUrl}}/api/v1/lucky-draws"
+          }
+        },
+        {
+          "name": "Buy ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Test-Firebase-Uid", "value": "local-dev-user" },
+              { "key": "X-Test-Email", "value": "dev@localhost" },
+              { "key": "X-Test-Email-Verified", "value": "true" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"commandId\": \"33333333-3333-4333-8333-333333333333\",\n  \"quantity\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/lucky-draws/{{drawId}}/tickets"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rewards",
+      "item": [
+        {
+          "name": "List catalogue",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Test-Firebase-Uid", "value": "local-dev-user" },
+              { "key": "X-Test-Email", "value": "dev@localhost" },
+              { "key": "X-Test-Email-Verified", "value": "true" }
+            ],
+            "url": "{{baseUrl}}/api/v1/rewards"
+          }
+        },
+        {
+          "name": "Redeem",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Test-Firebase-Uid", "value": "local-dev-user" },
+              { "key": "X-Test-Email", "value": "dev@localhost" },
+              { "key": "X-Test-Email-Verified", "value": "true" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"commandId\": \"44444444-4444-4444-8444-444444444444\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/rewards/{{rewardId}}/redeem"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Admin session",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Test-Firebase-Uid", "value": "local-dev-user" },
+              { "key": "X-Test-Email", "value": "dev@localhost" },
+              { "key": "X-Test-Email-Verified", "value": "true" }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/session"
+          }
+        },
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Test-Firebase-Uid", "value": "local-dev-user" },
+              { "key": "X-Test-Email", "value": "dev@localhost" },
+              { "key": "X-Test-Email-Verified", "value": "true" }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/dashboard"
+          }
+        },
+        {
+          "name": "Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Test-Firebase-Uid", "value": "local-dev-user" },
+              { "key": "X-Test-Email", "value": "dev@localhost" },
+              { "key": "X-Test-Email-Verified", "value": "true" }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/users?page=1&pageSize=25"
+          }
+        },
+        {
+          "name": "Draws",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Test-Firebase-Uid", "value": "local-dev-user" },
+              { "key": "X-Test-Email", "value": "dev@localhost" },
+              { "key": "X-Test-Email-Verified", "value": "true" }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/draws"
+          }
+        },
+        {
+          "name": "Rewards catalogue",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Test-Firebase-Uid", "value": "local-dev-user" },
+              { "key": "X-Test-Email", "value": "dev@localhost" },
+              { "key": "X-Test-Email-Verified", "value": "true" }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/rewards"
+          }
+        }
+      ]
+    }
+  ]
+}

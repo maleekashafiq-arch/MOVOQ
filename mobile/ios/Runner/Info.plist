@@ -33,6 +33,8 @@
 	<true/>
 	<key>NSMotionUsageDescription</key>
 	<string>MOVOQ counts your daily steps so you can earn points for reaching your goal.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>MOVOQ uses your location to show the weather and air quality for your walk.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

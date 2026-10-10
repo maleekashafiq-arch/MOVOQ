@@ -6,6 +6,7 @@ import '../config.dart';
 import '../models/current_user.dart';
 import '../models/daily_steps.dart';
 import '../models/local_identity.dart';
+import '../models/reward.dart';
 
 class ApiException implements Exception {
   ApiException(this.message, {this.statusCode, this.code});
@@ -157,6 +158,26 @@ class ApiClient {
       }),
     );
     _throwIfFailed(response);
+  }
+
+  Future<MarketplaceList> listRewards(String idToken) async {
+    final response = await _http.get(_uri('/api/v1/rewards'), headers: _headers(idToken));
+    _throwIfFailed(response);
+    return MarketplaceList.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
+  Future<RedeemResult> redeemReward({
+    required String idToken,
+    required String rewardId,
+    required String commandId,
+  }) async {
+    final response = await _http.post(
+      _uri('/api/v1/rewards/$rewardId/redeem'),
+      headers: _headers(idToken),
+      body: jsonEncode({'commandId': commandId}),
+    );
+    _throwIfFailed(response);
+    return RedeemResult.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
   Future<CurrentUser> _sendUser(

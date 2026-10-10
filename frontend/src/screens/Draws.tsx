@@ -26,6 +26,7 @@ const emptyForm = (): SaveDrawPayload => ({
 export function Draws() {
   const queryClient = useQueryClient()
   const [form, setForm] = useState<SaveDrawPayload | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -51,10 +52,22 @@ export function Draws() {
     mutationFn: api.createDraw,
     onSuccess: async () => {
       setForm(null)
+      setEditingId(null)
       setError(null)
       await invalidate()
     },
     onError: (cause) => setError(cause instanceof ApiError ? cause.message : 'The draw could not be saved.'),
+  })
+
+  const update = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: SaveDrawPayload }) => api.updateDraw(id, payload),
+    onSuccess: async () => {
+      setForm(null)
+      setEditingId(null)
+      setError(null)
+      await invalidate()
+    },
+    onError: (cause) => setError(cause instanceof ApiError ? cause.message : 'The draw could not be updated.'),
   })
 
   const changeStatus = useMutation({
@@ -108,6 +121,16 @@ export function Draws() {
       label: '',
       render: (draw) => (
         <div className="flex flex-wrap justify-end gap-1">
+          {(draw.status === 'Draft' || draw.status === 'Active') && (
+            <ActionButton
+              label="Edit"
+              onClick={() => {
+                setEditingId(draw.id)
+                setForm(toForm(draw))
+                setError(null)
+              }}
+            />
+          )}
           {draw.status === 'Draft' && (
             <ActionButton label="Activate" onClick={() => changeStatus.mutate({ id: draw.id, status: 'Active' })} />
           )}
@@ -138,6 +161,7 @@ export function Draws() {
           <button
             type="button"
             onClick={() => {
+              setEditingId(null)
               setForm(emptyForm())
               setError(null)
             }}
@@ -170,11 +194,16 @@ export function Draws() {
 
       {form && (
         <DrawForm
-          busy={create.isPending}
+          title={editingId ? 'Edit draw' : 'New draw'}
+          saveLabel={editingId ? 'Save changes' : 'Create draft'}
+          busy={create.isPending || update.isPending}
           form={form}
           onChange={setForm}
-          onCancel={() => setForm(null)}
-          onSave={() => create.mutate(form)}
+          onCancel={() => {
+            setForm(null)
+            setEditingId(null)
+          }}
+          onSave={() => (editingId ? update.mutate({ id: editingId, payload: form }) : create.mutate(form))}
         />
       )}
 
@@ -247,18 +276,37 @@ function ActionButton({
   )
 }
 
+function toForm(draw: AdminDraw): SaveDrawPayload {
+  return {
+    name: draw.name,
+    description: draw.description,
+    prizeDescription: draw.prizeDescription,
+    emoji: draw.emoji,
+    imageUrl: draw.imageUrl,
+    ticketCostPoints: draw.ticketCostPoints,
+    startAt: draw.startAt,
+    endAt: draw.endAt,
+    maxTickets: draw.maxTickets,
+    isFeatured: draw.isFeatured,
+  }
+}
+
 function DrawForm({
   form,
   onChange,
   onCancel,
   onSave,
   busy,
+  title,
+  saveLabel,
 }: {
   form: SaveDrawPayload
   onChange: (form: SaveDrawPayload) => void
   onCancel: () => void
   onSave: () => void
   busy: boolean
+  title: string
+  saveLabel: string
 }) {
   const set = <K extends keyof SaveDrawPayload>(key: K, value: SaveDrawPayload[K]) => onChange({ ...form, [key]: value })
 
@@ -271,7 +319,7 @@ function DrawForm({
           onSave()
         }}
       >
-        <h2 className="text-lg font-semibold text-neutral-900">New draw</h2>
+        <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
         <Field label="Name">
           <input required value={form.name} onChange={(e) => set('name', e.target.value)} className={inputClass} />
         </Field>
@@ -332,7 +380,7 @@ function DrawForm({
             disabled={busy}
             className="rounded-lg bg-[#3A86FF] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
           >
-            {busy ? 'Saving...' : 'Create draft'}
+            {busy ? 'Saving...' : saveLabel}
           </button>
         </div>
       </form>
